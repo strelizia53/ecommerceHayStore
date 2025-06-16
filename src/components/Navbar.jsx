@@ -40,7 +40,7 @@ export default function Navbar() {
     <nav style={styles.nav}>
       <div style={styles.logo}>
         <Link to="/" style={styles.logoText}>
-          HayStore
+          SafeParcel
         </Link>
       </div>
       <div style={styles.links}>

@@ -45,7 +45,7 @@ export default function Home() {
       {/* Hero Section */}
       <div style={styles.hero}>
         <div style={styles.heroContent}>
-          <h1 style={styles.heroTitle}>Welcome to HayStore 🛒</h1>
+          <h1 style={styles.heroTitle}>Welcome to SafeParcel 🛒</h1>
           <p style={styles.heroSubtitle}>Shop smart. Live stylishly.</p>
 
           {/* Search and Filter */}
