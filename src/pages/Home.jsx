@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
-import ProductCard from "../components/ProductCard"; // 👈 import the component
+import ProductCard from "../components/ProductCard";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -41,81 +41,136 @@ export default function Home() {
   });
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Welcome to HayStore 🛒</h1>
-      <p style={styles.subtitle}>Your one-stop shop for everything you need.</p>
+    <div style={styles.page}>
+      {/* Hero Section */}
+      <div style={styles.hero}>
+        <div style={styles.heroContent}>
+          <h1 style={styles.heroTitle}>Welcome to HayStore 🛒</h1>
+          <p style={styles.heroSubtitle}>Shop smart. Live stylishly.</p>
 
-      {/* Search and Filter */}
-      <div style={styles.filterRow}>
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={styles.search}
-        />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          style={styles.dropdown}
-        >
-          <option value="">All Categories</option>
-          {categories.map((cat, i) => (
-            <option key={i} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
+          {/* Search and Filter */}
+          <div style={styles.filterRow}>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={styles.search}
+            />
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={styles.dropdown}
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat, i) => (
+                <option key={i} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Product Grid */}
-      <div style={styles.grid}>
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-        {filteredProducts.length === 0 && (
-          <p style={{ width: "100%", marginTop: "2rem" }}>No products found.</p>
-        )}
+      <div style={styles.gridWrapper}>
+        <h2 style={styles.sectionHeading}>Featured Products</h2>
+        <div style={styles.grid}>
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+          {filteredProducts.length === 0 && (
+            <p style={styles.noProducts}>No products found.</p>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 const styles = {
-  container: {
+  page: {
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    backgroundColor: "#fff",
+    color: "#111",
+  },
+  hero: {
+    backgroundImage: `url('https://images.pexels.com/photos/19691166/pexels-photo-19691166.jpeg?auto=compress&cs=tinysrgb&w=1600')`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    height: "80vh",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     padding: "2rem",
     textAlign: "center",
+    position: "relative",
   },
-  title: {
-    fontSize: "2.5rem",
-    marginBottom: "1rem",
+  heroContent: {
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: "2rem",
+    borderRadius: "10px",
+    maxWidth: "700px",
+    width: "100%",
   },
-  subtitle: {
+  heroTitle: {
+    fontSize: "2.8rem",
+    marginBottom: "0.5rem",
+    fontWeight: "bold",
+  },
+  heroSubtitle: {
     fontSize: "1.2rem",
     marginBottom: "2rem",
+    color: "#eee",
   },
   filterRow: {
     display: "flex",
     justifyContent: "center",
-    marginBottom: "2rem",
-    gap: "1rem",
     flexWrap: "wrap",
+    gap: "1rem",
   },
   search: {
-    padding: "0.5rem",
-    width: "250px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
+    padding: "0.6rem 1rem",
+    width: "260px",
+    border: "1px solid #fff",
+    borderRadius: "6px",
+    backgroundColor: "#fff",
+    color: "#000",
+    fontSize: "1rem",
   },
   dropdown: {
-    padding: "0.5rem",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
+    padding: "0.6rem 1rem",
+    border: "1px solid #fff",
+    borderRadius: "6px",
+    backgroundColor: "#fff",
+    color: "#000",
+    fontSize: "1rem",
+  },
+  gridWrapper: {
+    padding: "3rem 2rem",
+    maxWidth: "1200px",
+    margin: "0 auto",
+  },
+  sectionHeading: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    marginBottom: "1.5rem",
+    textAlign: "center",
+    color: "#000",
   },
   grid: {
     display: "flex",
     justifyContent: "center",
     gap: "2rem",
     flexWrap: "wrap",
+  },
+  noProducts: {
+    width: "100%",
+    textAlign: "center",
+    marginTop: "2rem",
+    fontSize: "1rem",
+    color: "#666",
   },
 };

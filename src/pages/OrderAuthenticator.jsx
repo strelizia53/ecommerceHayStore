@@ -44,7 +44,6 @@ export default function OrderAuthenticator() {
           const orderId = params.get("orderId");
           const secretKey = params.get("secretKey");
 
-          // check against DB
           const qrRef = doc(db, "orderQRCodes", orderId);
           const qrSnap = await getDoc(qrRef);
 
@@ -92,16 +91,39 @@ export default function OrderAuthenticator() {
   };
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>🔐 Order Authenticator</h1>
-      <input type="file" accept="image/*" onChange={handleImageUpload} />
+    <div style={styles.container}>
+      <h1 style={styles.title}>🔐 Order Authenticator</h1>
+
+      <label style={styles.uploadLabel}>
+        Upload QR Image:
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          style={styles.fileInput}
+        />
+      </label>
+
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
       {scanStatus && (
-        <p>
+        <p style={styles.scanResult}>
           🧪 Damage Scan Result:{" "}
-          <strong>
-            {scanStatus === "undamageQR" ? "✅ Undamaged" : "❌ Damaged"}
+          <strong
+            style={{
+              color:
+                scanStatus === "undamageQR"
+                  ? "green"
+                  : scanStatus === "damageQR"
+                  ? "red"
+                  : "#555",
+            }}
+          >
+            {scanStatus === "undamageQR"
+              ? "✅ Undamaged"
+              : scanStatus === "damageQR"
+              ? "❌ Damaged"
+              : scanStatus}
           </strong>
         </p>
       )}
@@ -110,7 +132,7 @@ export default function OrderAuthenticator() {
         <div style={styles.resultBox}>
           {orderDetails.matched ? (
             <>
-              <h3>✅ Order Verified</h3>
+              <h3 style={{ color: "green" }}>✅ Order Verified</h3>
               <p>
                 <strong>Order ID:</strong> {orderDetails.orderId}
               </p>
@@ -120,16 +142,19 @@ export default function OrderAuthenticator() {
               <p>
                 <strong>Total:</strong> ${orderDetails.totalPrice.toFixed(2)}
               </p>
-              <ul>
+              <ul style={styles.itemList}>
                 {orderDetails.items.map((item, i) => (
-                  <li key={i}>
-                    {item.title} – {item.quantity} × ${item.price}
+                  <li key={i} style={styles.item}>
+                    <span>{item.title}</span>
+                    <span>
+                      {item.quantity} × ${item.price.toFixed(2)}
+                    </span>
                   </li>
                 ))}
               </ul>
             </>
           ) : (
-            <p style={{ color: "red" }}>❌ Order could not be authenticated</p>
+            <p style={styles.errorText}>❌ Order could not be authenticated</p>
           )}
         </div>
       )}
@@ -138,10 +163,52 @@ export default function OrderAuthenticator() {
 }
 
 const styles = {
+  container: {
+    padding: "2rem",
+    maxWidth: "700px",
+    margin: "0 auto",
+    fontFamily: "'Segoe UI', Tahoma, sans-serif",
+  },
+  title: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    marginBottom: "1.5rem",
+  },
+  uploadLabel: {
+    display: "block",
+    marginBottom: "1rem",
+    fontSize: "1rem",
+    fontWeight: "500",
+  },
+  fileInput: {
+    display: "block",
+    marginTop: "0.5rem",
+  },
+  scanResult: {
+    marginTop: "1rem",
+    fontSize: "1rem",
+  },
   resultBox: {
     marginTop: "2rem",
-    border: "1px solid #ccc",
-    padding: "1rem",
-    borderRadius: "8px",
+    border: "1px solid #ddd",
+    backgroundColor: "#f9f9f9",
+    padding: "1.5rem",
+    borderRadius: "10px",
+  },
+  errorText: {
+    color: "red",
+    fontSize: "1.1rem",
+  },
+  itemList: {
+    listStyle: "none",
+    padding: 0,
+    marginTop: "1rem",
+  },
+  item: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "0.5rem 0",
+    borderBottom: "1px solid #eee",
+    fontSize: "0.95rem",
   },
 };

@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -19,7 +18,6 @@ export default function Login() {
 
     let emailToUse = identifier;
 
-    // If user entered a username, convert it to email
     if (!identifier.includes("@")) {
       const q = query(
         collection(db, "users"),
@@ -39,23 +37,100 @@ export default function Login() {
   };
 
   return (
-    <form onSubmit={handleLogin}>
-      <h2>Login</h2>
-      <input
-        name="identifier"
-        placeholder="Username or Email"
-        onChange={handleChange}
-        required
-      />
-      <input
-        name="password"
-        type="password"
-        placeholder="Password"
-        onChange={handleChange}
-        required
-      />
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <button type="submit">Login</button>
-    </form>
+    <div style={styles.wrapper}>
+      <div style={styles.imageSection}>
+        <img
+          src="https://images.pexels.com/photos/29124192/pexels-photo-29124192.jpeg"
+          alt="Login Visual"
+          style={styles.image}
+        />
+      </div>
+
+      <div style={styles.formSection}>
+        <form onSubmit={handleLogin} style={styles.form}>
+          <h2 style={styles.title}>Login</h2>
+          <input
+            name="identifier"
+            placeholder="Username or Email"
+            onChange={handleChange}
+            required
+            style={styles.input}
+          />
+          <input
+            name="password"
+            type="password"
+            placeholder="Password"
+            onChange={handleChange}
+            required
+            style={styles.input}
+          />
+          {error && <p style={styles.error}>{error}</p>}
+          <button type="submit" style={styles.button}>
+            Login
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
+
+const styles = {
+  wrapper: {
+    display: "flex",
+    flexDirection: "row",
+    minHeight: "100vh",
+    fontFamily: "'Segoe UI', Tahoma, sans-serif",
+    flexWrap: "wrap", // responsive
+  },
+  imageSection: {
+    flex: "1 1 400px",
+    maxHeight: "100vh",
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  formSection: {
+    flex: "1 1 400px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    padding: "2rem",
+  },
+  form: {
+    width: "100%",
+    maxWidth: "400px",
+    display: "flex",
+    flexDirection: "column",
+  },
+  title: {
+    fontSize: "2rem",
+    marginBottom: "1.5rem",
+    textAlign: "center",
+    color: "#000",
+  },
+  input: {
+    padding: "0.75rem 1rem",
+    marginBottom: "1rem",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+    fontSize: "1rem",
+  },
+  button: {
+    padding: "0.75rem",
+    backgroundColor: "#000",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "1rem",
+    cursor: "pointer",
+  },
+  error: {
+    color: "#e74c3c",
+    marginBottom: "1rem",
+    textAlign: "center",
+  },
+};

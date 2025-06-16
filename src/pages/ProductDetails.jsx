@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { db, auth } from "../firebase";
 import {
   doc,
@@ -8,18 +8,21 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  getDocs,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 export default function ProductDetails() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [user, setUser] = useState(null);
+  const [similarProducts, setSimilarProducts] = useState([]);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
 
     const fetchProduct = async () => {
       const docRef = doc(db, "products", id);
@@ -33,6 +36,20 @@ export default function ProductDetails() {
 
     fetchProduct();
     return () => unsub();
+  }, [id]);
+
+  useEffect(() => {
+    const fetchSimilarProducts = async () => {
+      const snapshot = await getDocs(collection(db, "products"));
+      const allProducts = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((p) => p.id !== id);
+
+      const shuffled = [...allProducts].sort(() => 0.5 - Math.random());
+      setSimilarProducts(shuffled.slice(0, 4));
+    };
+
+    fetchSimilarProducts();
   }, [id]);
 
   const handleAddToWishlist = async () => {
@@ -56,59 +73,171 @@ export default function ProductDetails() {
     alert("Added to cart!");
   };
 
+  const carouselSettings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    arrows: true,
+    autoplay: true,
+  };
+
   if (!product)
     return <p style={{ padding: "2rem" }}>Loading or product not found...</p>;
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "600px", margin: "auto" }}>
-      <div style={styles.gallery}>
-        {(product.images || [product.image]).map((url, index) => (
-          <img
-            key={index}
-            src={url}
-            alt={`${product.title} ${index + 1}`}
-            style={styles.image}
-          />
-        ))}
-      </div>
-      <h1>{product.title}</h1>
-      <p>
-        <strong>Description:</strong>
-      </p>
-      <p>{product.description}</p>
-      <p>
-        <strong>Price:</strong> ${product.price}
-      </p>
-      <p>
-        <strong>Stock:</strong> {product.stock}
-      </p>
-      <p>
-        <strong>Category:</strong> {product.category}
-      </p>
-      <p>
-        <strong>Seller:</strong> {product.username}
-      </p>
+    <div style={styles.container}>
+      <div style={styles.productSection}>
+        {/* Image Carousel */}
+        <div style={styles.carouselContainer}>
+          <Slider {...carouselSettings}>
+            {(product.images || [product.image]).map((url, index) => (
+              <div key={index}>
+                <img
+                  src={url}
+                  alt={`product-${index}`}
+                  style={styles.carouselImage}
+                />
+              </div>
+            ))}
+          </Slider>
+        </div>
 
-      {/* Action Buttons */}
-      <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
-        <button onClick={handleAddToWishlist}>💖 Add to Wishlist</button>
-        <button onClick={handleAddToCart}>🛒 Add to Cart</button>
+        {/* Product Details */}
+        <div style={styles.details}>
+          <h1>{product.title}</h1>
+          <p>{product.description}</p>
+          <p>
+            <strong>Price:</strong> ${product.price}
+          </p>
+          <p>
+            <strong>Stock:</strong> {product.stock}
+          </p>
+          <p>
+            <strong>Category:</strong> {product.category}
+          </p>
+          <p>
+            <strong>Seller:</strong> {product.username}
+          </p>
+
+          <div style={styles.actions}>
+            <button onClick={handleAddToWishlist} style={styles.wishlistBtn}>
+              💖 Wishlist
+            </button>
+            <button onClick={handleAddToCart} style={styles.cartBtn}>
+              🛒 Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Similar Products */}
+      <div style={styles.similarSection}>
+        <h2 style={styles.similarTitle}>🛍️ Similar Products</h2>
+        <div style={styles.similarGrid}>
+          {similarProducts.map((prod) => (
+            <Link to={`/product/${prod.id}`} key={prod.id} style={styles.card}>
+              <img
+                src={prod.images?.[0] || prod.image}
+                alt={prod.title}
+                style={styles.cardImage}
+              />
+              <p style={styles.cardTitle}>{prod.title}</p>
+              <p style={styles.cardPrice}>${prod.price.toFixed(2)}</p>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
 const styles = {
-  gallery: {
+  container: {
+    padding: "2rem",
+    fontFamily: "'Segoe UI', Tahoma, sans-serif",
+    maxWidth: "1200px",
+    margin: "auto",
+  },
+  productSection: {
+    display: "flex",
+    gap: "2rem",
+    flexWrap: "wrap",
+    marginBottom: "3rem",
+  },
+  carouselContainer: {
+    flex: 1,
+    minWidth: "300px",
+  },
+  carouselImage: {
+    width: "100%",
+    height: "500px",
+    objectFit: "cover",
+    borderRadius: "10px",
+  },
+  details: {
+    flex: 1,
+    minWidth: "300px",
+  },
+  actions: {
+    marginTop: "1.5rem",
     display: "flex",
     gap: "1rem",
-    marginBottom: "1.5rem",
-    overflowX: "auto",
   },
-  image: {
-    width: "150px",
-    height: "150px",
+  wishlistBtn: {
+    padding: "0.75rem 1.5rem",
+    backgroundColor: "#f06292",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "1rem",
+  },
+  cartBtn: {
+    padding: "0.75rem 1.5rem",
+    backgroundColor: "#000",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "1rem",
+  },
+  similarSection: {
+    marginTop: "3rem",
+  },
+  similarTitle: {
+    fontSize: "1.6rem",
+    marginBottom: "1rem",
+  },
+  similarGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "1.5rem",
+  },
+  card: {
+    width: "200px",
+    backgroundColor: "#fafafa",
+    padding: "1rem",
+    borderRadius: "10px",
+    textDecoration: "none",
+    color: "#000",
+    border: "1px solid #eee",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+  },
+  cardImage: {
+    width: "100%",
+    height: "160px",
     objectFit: "cover",
     borderRadius: "8px",
+    marginBottom: "0.5rem",
+  },
+  cardTitle: {
+    fontSize: "1rem",
+    fontWeight: 500,
+  },
+  cardPrice: {
+    fontSize: "0.9rem",
+    color: "#555",
   },
 };

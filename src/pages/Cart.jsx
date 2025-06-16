@@ -28,7 +28,6 @@ export default function Cart() {
         fetchCart(u.uid);
       }
     });
-
     return () => unsub();
   }, []);
 
@@ -106,7 +105,7 @@ export default function Cart() {
       items: orderItems,
       totalPrice,
       status: "Pending",
-      orderDate: Timestamp.now(), // Firestore-friendly date
+      orderDate: Timestamp.now(),
     };
 
     await setDoc(doc(db, "orders", orderId), order);
@@ -132,101 +131,185 @@ export default function Cart() {
   }, {});
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>🛒 Your Cart</h1>
-      {cartItems.length === 0 ? (
-        <p>No items in your cart.</p>
-      ) : (
-        <>
-          {Object.entries(groupedByVendor).map(([vendorId, items]) => (
-            <div key={vendorId} style={{ marginBottom: "2rem" }}>
-              <h2>Vendor: {items[0].username}</h2>
-              <div style={styles.grid}>
-                {items.map((item) => (
-                  <div key={item.productId} style={styles.card}>
-                    <Link
-                      to={`/product/${item.productId}`}
-                      style={{ textDecoration: "none", color: "inherit" }}
-                    >
-                      <img
-                        src={item.images?.[0] || item.image}
-                        alt={item.title}
-                        style={styles.img}
-                      />
-                      <h3>{item.title}</h3>
-                      <p>${item.price}</p>
-                    </Link>
-                    <div style={{ margin: "0.5rem 0" }}>
-                      <button
-                        onClick={() => updateQuantity(item.productId, -1)}
+    <div style={styles.wrapper}>
+      {/* Left Side Image */}
+      <div style={styles.sideImage}>
+        <img
+          src="https://images.pexels.com/photos/31452650/pexels-photo-31452650.jpeg"
+          alt="Promo"
+          style={styles.image}
+        />
+      </div>
+
+      {/* Main Cart Content */}
+      <div style={styles.container}>
+        <h1 style={styles.title}>🛒 Your Cart</h1>
+        {cartItems.length === 0 ? (
+          <p>No items in your cart.</p>
+        ) : (
+          Object.entries(groupedByVendor).map(([vendorId, items]) => {
+            const total = items.reduce(
+              (sum, item) =>
+                sum + (quantities[item.productId] || 1) * item.price,
+              0
+            );
+
+            return (
+              <div key={vendorId} style={styles.vendorBlock}>
+                <h2 style={styles.vendorName}>Vendor: {items[0].username}</h2>
+                <div style={styles.grid}>
+                  {items.map((item) => (
+                    <div key={item.productId} style={styles.card}>
+                      <Link
+                        to={`/product/${item.productId}`}
+                        style={{ textDecoration: "none", color: "inherit" }}
                       >
-                        -
-                      </button>{" "}
-                      {quantities[item.productId] || 1}{" "}
-                      <button onClick={() => updateQuantity(item.productId, 1)}>
-                        +
+                        <img
+                          src={item.images?.[0] || item.image}
+                          alt={item.title}
+                          style={styles.img}
+                        />
+                        <h3>{item.title}</h3>
+                        <p>${item.price.toFixed(2)}</p>
+                      </Link>
+                      <div style={styles.quantityControls}>
+                        <button
+                          onClick={() => updateQuantity(item.productId, -1)}
+                        >
+                          -
+                        </button>
+                        <span style={{ margin: "0 1rem" }}>
+                          {quantities[item.productId] || 1}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item.productId, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(item.productId)}
+                        style={styles.removeBtn}
+                      >
+                        ❌ Remove
                       </button>
                     </div>
-                    <button
-                      onClick={() => removeFromCart(item.productId)}
-                      style={styles.removeBtn}
-                    >
-                      ❌ Remove
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div style={styles.footer}>
+                  <p style={styles.totalText}>
+                    🧾 Total: <strong>${total.toFixed(2)}</strong>
+                  </p>
+                  <button
+                    onClick={() => placeOrder(vendorId, items)}
+                    style={styles.orderBtn}
+                  >
+                    ✅ Place Order for {items.length} item(s)
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => placeOrder(vendorId, items)}
-                style={styles.orderBtn}
-              >
-                ✅ Place Order for {items.length} item(s)
-              </button>
-            </div>
-          ))}
-        </>
-      )}
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
 
 const styles = {
+  wrapper: {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: "2rem",
+    padding: "2rem",
+  },
+  sideImage: {
+    flex: "1 1 300px",
+    maxWidth: "400px",
+    borderRadius: "12px",
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    borderRadius: "12px",
+  },
+  container: {
+    flex: "2 1 700px",
+    maxWidth: "100%",
+    fontFamily: "'Segoe UI', Tahoma, sans-serif",
+  },
+  title: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    marginBottom: "2rem",
+  },
+  vendorBlock: {
+    marginBottom: "3rem",
+  },
+  vendorName: {
+    fontSize: "1.2rem",
+    marginBottom: "1rem",
+  },
   grid: {
     display: "flex",
-    gap: "1.5rem",
     flexWrap: "wrap",
-    marginTop: "1.5rem",
+    gap: "1.5rem",
   },
   card: {
-    border: "1px solid #ccc",
+    border: "1px solid #ddd",
     padding: "1rem",
-    borderRadius: "8px",
+    borderRadius: "10px",
     width: "220px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    boxShadow: "0 3px 8px rgba(0,0,0,0.05)",
+    background: "#fff",
   },
   img: {
     width: "100%",
-    height: "150px",
+    height: "140px",
     objectFit: "cover",
     borderRadius: "6px",
     marginBottom: "0.5rem",
   },
+  quantityControls: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: "0.5rem",
+  },
   removeBtn: {
     marginTop: "0.5rem",
     background: "#ff4d4d",
-    color: "white",
+    color: "#fff",
     border: "none",
     padding: "0.4rem 0.8rem",
     borderRadius: "5px",
     cursor: "pointer",
+    width: "100%",
   },
   orderBtn: {
     marginTop: "1rem",
-    background: "#28a745",
-    color: "white",
-    padding: "0.6rem 1rem",
+    background: "#000",
+    color: "#fff",
+    padding: "0.6rem 1.2rem",
     border: "none",
-    borderRadius: "5px",
+    borderRadius: "6px",
+    fontSize: "1rem",
     cursor: "pointer",
+  },
+  footer: {
+    marginTop: "1rem",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#f8f8f8",
+    padding: "1rem",
+    borderRadius: "8px",
+  },
+  totalText: {
+    fontSize: "1rem",
+    color: "#222",
   },
 };

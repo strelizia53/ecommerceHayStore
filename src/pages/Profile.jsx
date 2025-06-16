@@ -61,6 +61,14 @@ export default function Profile() {
         <Link to="/wishlist" style={linkStyle}>
           💖 View Wishlist
         </Link>
+        <br />
+        <Link to="/myorders" style={linkStyle}>
+          my orders
+        </Link>
+        <br />
+        <Link to="/orderauthenticator" style={linkStyle}>
+          Order Authenticator
+        </Link>
       </div>
 
       {userType !== "vendor" && (
