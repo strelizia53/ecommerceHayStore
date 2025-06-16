@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -6,6 +7,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 export default function Login() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
+  const navigate = useNavigate(); // ✅ Initialize navigate
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -18,6 +20,7 @@ export default function Login() {
 
     let emailToUse = identifier;
 
+    // Convert username to email if needed
     if (!identifier.includes("@")) {
       const q = query(
         collection(db, "users"),
@@ -30,7 +33,7 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, emailToUse, password);
-      alert("Login successful!");
+      navigate("/"); // ✅ Redirect to homepage after login
     } catch (err) {
       setError("Invalid credentials");
     }
@@ -74,13 +77,14 @@ export default function Login() {
   );
 }
 
+// Styling remains the same...
 const styles = {
   wrapper: {
     display: "flex",
     flexDirection: "row",
     minHeight: "100vh",
     fontFamily: "'Segoe UI', Tahoma, sans-serif",
-    flexWrap: "wrap", // responsive
+    flexWrap: "wrap",
   },
   imageSection: {
     flex: "1 1 400px",
