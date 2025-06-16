@@ -23,7 +23,7 @@ export default function Profile() {
           setUserType(data.userType);
         }
       } else {
-        navigate("/login"); // redirect if not logged in
+        navigate("/login");
       }
       setLoading(false);
     });
@@ -41,54 +41,112 @@ export default function Profile() {
     }
   };
 
-  if (loading) return <p>Loading profile...</p>;
+  if (loading) return <div style={styles.loading}>Loading profile...</div>;
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Profile</h1>
-      <p>
-        Username: <strong>{username}</strong>
-      </p>
-      <p>
-        Role: <strong>{userType}</strong>
-      </p>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h2 style={styles.title}>👤 Profile</h2>
+        <p>
+          <strong>Username:</strong> {username}
+        </p>
+        <p>
+          <strong>Role:</strong> {userType}
+        </p>
 
-      <div style={{ marginTop: "1.5rem" }}>
-        <Link to="/cart" style={linkStyle}>
-          🛒 View Cart
-        </Link>
-        <br />
-        <Link to="/wishlist" style={linkStyle}>
-          💖 View Wishlist
-        </Link>
-        <br />
-        <Link to="/myorders" style={linkStyle}>
-          my orders
-        </Link>
-        <br />
-        <Link to="/orderauthenticator" style={linkStyle}>
-          Order Authenticator
-        </Link>
-      </div>
-
-      {userType !== "vendor" && (
-        <button onClick={handleBecomeVendor} style={{ marginTop: "1.5rem" }}>
-          Become a Vendor
-        </button>
-      )}
-
-      {userType === "vendor" && (
-        <div style={{ marginTop: "1rem" }}>
-          <Link to="/vendor">Go to Vendor Portal</Link>
+        <div style={styles.links}>
+          <Link to="/cart" style={styles.link}>
+            🛒 View Cart
+          </Link>
+          <Link to="/wishlist" style={styles.link}>
+            💖 View Wishlist
+          </Link>
+          <Link to="/myorders" style={styles.link}>
+            📦 My Orders
+          </Link>
+          <Link to="/orderauthenticator" style={styles.link}>
+            🧾 Order Authenticator
+          </Link>
         </div>
-      )}
+
+        {userType !== "vendor" && (
+          <button onClick={handleBecomeVendor} style={styles.vendorBtn}>
+            Become a Vendor
+          </button>
+        )}
+
+        {userType === "vendor" && (
+          <div style={{ marginTop: "1rem" }}>
+            <Link to="/vendor" style={styles.vendorLink}>
+              🚀 Go to Vendor Portal
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-const linkStyle = {
-  display: "inline-block",
-  marginTop: "0.5rem",
-  textDecoration: "none",
-  color: "#0077cc",
+const styles = {
+  container: {
+    padding: "2rem",
+    display: "flex",
+    justifyContent: "center",
+    fontFamily: "'Segoe UI', Tahoma, sans-serif",
+    backgroundColor: "#f7f9fc",
+    minHeight: "100vh",
+  },
+  card: {
+    background: "#fff",
+    padding: "2rem",
+    borderRadius: "12px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+    maxWidth: "500px",
+    width: "100%",
+  },
+  title: {
+    fontSize: "1.8rem",
+    marginBottom: "1rem",
+    textAlign: "center",
+    color: "#333",
+  },
+  links: {
+    marginTop: "1.5rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.8rem",
+  },
+  link: {
+    textDecoration: "none",
+    fontSize: "1rem",
+    color: "#0077cc",
+    fontWeight: "500",
+    padding: "0.5rem 0.8rem",
+    borderRadius: "6px",
+    background: "#eef6ff",
+    transition: "0.2s ease",
+  },
+  vendorBtn: {
+    marginTop: "2rem",
+    padding: "0.7rem 1.2rem",
+    backgroundColor: "#28a745",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  vendorLink: {
+    textDecoration: "none",
+    color: "#000",
+    fontWeight: "600",
+    backgroundColor: "#ffe9a3",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    display: "inline-block",
+  },
+  loading: {
+    padding: "2rem",
+    textAlign: "center",
+  },
 };
