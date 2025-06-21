@@ -2,29 +2,28 @@ import React, { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import Webcam from "react-webcam";
 import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export default function OrderAuthenticator() {
   const canvasRef = useRef(null);
   const webcamRef = useRef(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [scanStatus, setScanStatus] = useState("");
   const [orderDetails, setOrderDetails] = useState(null);
   const [useCamera, setUseCamera] = useState(false);
+  const [canComplete, setCanComplete] = useState(false);
+  const [shouldStopCamera, setShouldStopCamera] = useState(false);
+  const [scanStatus, setScanStatus] = useState("");
 
-  // Camera scanning interval
   useEffect(() => {
     let interval;
-    if (useCamera) {
+    if (useCamera && !shouldStopCamera) {
       interval = setInterval(() => {
         captureAndScan();
       }, 2000);
     }
     return () => clearInterval(interval);
-  }, [useCamera]);
+  }, [useCamera, shouldStopCamera]);
 
-  // Capture from camera and scan
-  const captureAndScan = () => {
+  const captureAndScan = async () => {
     if (!webcamRef.current) return;
     const imageSrc = webcamRef.current.getScreenshot();
     if (!imageSrc) return;
@@ -39,13 +38,13 @@ export default function OrderAuthenticator() {
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(imageData.data, canvas.width, canvas.height);
-      processQR(code?.data);
+      const qrData = code?.data;
 
-      // ✅ NEW: Convert base64 image to blob and send to API
       const blob = await (await fetch(imageSrc)).blob();
       const formData = new FormData();
       formData.append("file", blob, "snapshot.jpg");
 
+      let damageResult = "";
       try {
         const response = await fetch(
           "https://backendqrcodehayyan-production.up.railway.app/scan",
@@ -55,9 +54,15 @@ export default function OrderAuthenticator() {
           }
         );
         const json = await response.json();
+        damageResult = json.result;
         setScanStatus(json.result);
-      } catch (err) {
+      } catch {
+        damageResult = "API scan failed";
         setScanStatus("API scan failed");
+      }
+
+      if (qrData && damageResult === "undamageQR") {
+        await processQR(qrData);
       }
     };
   };
@@ -65,10 +70,6 @@ export default function OrderAuthenticator() {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setImageFile(file);
-    setScanStatus("Processing...");
-    setOrderDetails(null);
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -82,56 +83,85 @@ export default function OrderAuthenticator() {
         ctx.drawImage(img, 0, 0);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, canvas.width, canvas.height);
-        processQR(code?.data);
+        const qrData = code?.data;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        let damageResult = "";
+        try {
+          const response = await fetch(
+            "https://backendqrcodehayyan-production.up.railway.app/scan",
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+          const json = await response.json();
+          damageResult = json.result;
+          setScanStatus(json.result);
+        } catch {
+          damageResult = "API scan failed";
+          setScanStatus("API scan failed");
+        }
+
+        if (qrData && damageResult === "undamageQR") {
+          await processQR(qrData);
+        }
       };
     };
     reader.readAsDataURL(file);
-
-    // Send to damage detection API
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const response = await fetch(
-        "https://backendqrcodehayyan-production.up.railway.app/scan",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-      const json = await response.json();
-      setScanStatus(json.result);
-    } catch {
-      setScanStatus("API scan failed");
-    }
   };
 
   const processQR = async (data) => {
-    if (!data) return;
-
     const params = new URLSearchParams(data);
     const orderId = params.get("orderId");
     const secretKey = params.get("secretKey");
 
     const qrRef = doc(db, "orderQRCodes", orderId);
     const qrSnap = await getDoc(qrRef);
+    if (!qrSnap.exists()) return;
 
-    if (qrSnap.exists()) {
-      const data = qrSnap.data();
-      if (data.secretKey === secretKey) {
-        const orderSnap = await getDoc(doc(db, "orders", orderId));
-        const orderData = orderSnap.exists() ? orderSnap.data() : null;
-
-        setOrderDetails({
-          ...orderData,
-          matched: true,
-          orderId,
-        });
-      } else {
-        setOrderDetails({ matched: false });
-      }
-    } else {
+    const qrData = qrSnap.data();
+    if (qrData.secretKey !== secretKey) {
       setOrderDetails({ matched: false });
+      return;
     }
+
+    const orderSnap = await getDoc(doc(db, "orders", orderId));
+    if (!orderSnap.exists()) return;
+
+    const orderData = orderSnap.data();
+
+    setOrderDetails({
+      ...orderData,
+      matched: true,
+      orderId,
+    });
+
+    setCanComplete(true);
+    setShouldStopCamera(true);
+  };
+
+  const completeOrder = async () => {
+    if (!orderDetails || !orderDetails.orderId) return;
+    const orderId = orderDetails.orderId;
+
+    for (const item of orderDetails.items) {
+      const productRef = doc(db, "products", item.productId);
+      const productSnap = await getDoc(productRef);
+      if (productSnap.exists()) {
+        const product = productSnap.data();
+        const newStock = Math.max((product.stock || 0) - item.quantity, 0);
+        await updateDoc(productRef, { stock: newStock });
+      }
+    }
+
+    await updateDoc(doc(db, "orders", orderId), { status: "Completed" });
+
+    alert("✅ Order completed and stock updated.");
+    setCanComplete(false);
+    setOrderDetails((prev) => ({ ...prev, status: "Completed" }));
   };
 
   return (
@@ -146,20 +176,19 @@ export default function OrderAuthenticator() {
             setUseCamera((prev) => !prev);
             setOrderDetails(null);
             setScanStatus("");
+            setShouldStopCamera(false);
           }}
         />
         Use Camera Scanner
       </label>
 
       {useCamera ? (
-        <div style={{ marginBottom: "1rem" }}>
-          <Webcam
-            ref={webcamRef}
-            screenshotFormat="image/jpeg"
-            videoConstraints={{ facingMode: "environment" }}
-            style={{ width: "100%", maxWidth: "500px", borderRadius: "10px" }}
-          />
-        </div>
+        <Webcam
+          ref={webcamRef}
+          screenshotFormat="image/jpeg"
+          videoConstraints={{ facingMode: "environment" }}
+          style={{ width: "100%", maxWidth: "500px", borderRadius: "10px" }}
+        />
       ) : (
         <label style={styles.uploadLabel}>
           Upload QR Image:
@@ -213,6 +242,22 @@ export default function OrderAuthenticator() {
                   </li>
                 ))}
               </ul>
+              {canComplete && (
+                <button
+                  onClick={completeOrder}
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.6rem 1.2rem",
+                    backgroundColor: "#000",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✅ Complete Order
+                </button>
+              )}
             </>
           ) : (
             <p style={{ color: "red" }}>❌ Order could not be authenticated</p>

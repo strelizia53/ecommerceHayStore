@@ -9,18 +9,17 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 import QRCode from "qrcode";
 import { v4 as uuidv4 } from "uuid";
-import jsPDF from "jspdf";
 
 export default function VendorOrders() {
   const [orders, setOrders] = useState([]);
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [qrData, setQrData] = useState({});
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -47,7 +46,11 @@ export default function VendorOrders() {
       const buyerName = buyerSnap.exists()
         ? buyerSnap.data().username
         : "Unknown";
-      results.push({ id: orderDoc.id, ...data, buyerName });
+
+      const qrSnap = await getDoc(doc(db, "orderQRCodes", orderDoc.id));
+      const qrUrl = qrSnap.exists() ? qrSnap.data().qrUrl : null;
+
+      results.push({ id: orderDoc.id, ...data, buyerName, qrUrl });
     }
 
     setOrders(results);
@@ -76,8 +79,15 @@ export default function VendorOrders() {
       createdAt: new Date().toISOString(),
     });
 
-    alert("QR code generated and stored.");
-    setQrData((prev) => ({ ...prev, [order.id]: qrUrl }));
+    await updateDoc(doc(db, "orders", order.id), { status: "Accepted" });
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === order.id ? { ...o, status: "Accepted", qrUrl } : o
+      )
+    );
+
+    alert("QR code generated and order accepted.");
   };
 
   const handleReject = async (orderId) => {
@@ -85,18 +95,6 @@ export default function VendorOrders() {
     await deleteDoc(doc(db, "orders", orderId));
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
     alert("Order rejected.");
-  };
-
-  const downloadPdf = (orderId, qrUrl) => {
-    const pdf = new jsPDF();
-    pdf.setFontSize(16);
-    pdf.text("Order QR Code", 20, 20);
-    const img = new Image();
-    img.src = qrUrl;
-    img.onload = () => {
-      pdf.addImage(img, "PNG", 20, 30, 100, 100);
-      pdf.save(`order-${orderId}-QR.pdf`);
-    };
   };
 
   if (!vendor) return <p style={styles.center}>Please log in as a vendor.</p>;
@@ -145,31 +143,33 @@ export default function VendorOrders() {
               <strong>Total:</strong> ${order.totalPrice?.toFixed(2) || "N/A"}
             </p>
 
-            <div style={styles.actions}>
-              <button style={styles.accept} onClick={() => handleAccept(order)}>
-                ✅ Accept & Generate QR
-              </button>
-              <button
-                style={styles.reject}
-                onClick={() => handleReject(order.id)}
-              >
-                ❌ Reject
-              </button>
-            </div>
-
-            {qrData[order.id] && (
-              <div style={styles.qrSection}>
-                <img
-                  src={qrData[order.id]}
-                  alt="QR Code"
-                  style={styles.qrImage}
-                />
+            {!order.qrUrl && (
+              <div style={styles.actions}>
                 <button
-                  onClick={() => downloadPdf(order.id, qrData[order.id])}
+                  style={styles.accept}
+                  onClick={() => handleAccept(order)}
+                >
+                  ✅ Accept & Generate QR
+                </button>
+                <button
+                  style={styles.reject}
+                  onClick={() => handleReject(order.id)}
+                >
+                  ❌ Reject
+                </button>
+              </div>
+            )}
+
+            {order.qrUrl && (
+              <div style={styles.qrSection}>
+                <img src={order.qrUrl} alt="QR Code" style={styles.qrImage} />
+                <a
+                  href={order.qrUrl}
+                  download={`order-${order.id}-QR.png`}
                   style={styles.downloadBtn}
                 >
-                  📥 Download PDF
-                </button>
+                  📥 Download QR Image
+                </a>
               </div>
             )}
           </div>
@@ -275,5 +275,7 @@ const styles = {
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-block",
   },
 };
