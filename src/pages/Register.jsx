@@ -66,7 +66,7 @@ export default function Register() {
       {/* Left Image Panel */}
       <div style={styles.imageSection}>
         <img
-          src="https://images.pexels.com/photos/32466493/pexels-photo-32466493.jpeg"
+          src="/register.jpeg" // Load from public folderclea
           alt="Register Visual"
           style={styles.image}
         />

@@ -43,12 +43,11 @@ export default function Login() {
     <div style={styles.wrapper}>
       <div style={styles.imageSection}>
         <img
-          src="https://images.pexels.com/photos/29124192/pexels-photo-29124192.jpeg"
+          src="/login.jpeg" // ✅ Load from public folder'}
           alt="Login Visual"
           style={styles.image}
         />
       </div>
-
       <div style={styles.formSection}>
         <form onSubmit={handleLogin} style={styles.form}>
           <h2 style={styles.title}>Login</h2>

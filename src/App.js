@@ -13,6 +13,7 @@ import Cart from "./pages/Cart";
 import MyOrders from "./pages/MyOrders";
 import VendorOrders from "./pages/VendorOrders";
 import OrderAuthenticator from "./pages/OrderAuthenticator";
+import Footer from "./components/footer";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/vendororders" element={<VendorOrders />} />
         <Route path="/orderauthenticator" element={<OrderAuthenticator />} />
       </Routes>
+      <Footer />
     </BrowserRouter>
   );
 }
