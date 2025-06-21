@@ -39,6 +39,7 @@ export default function Cart() {
     const qty = {};
 
     for (const docSnap of snapshot.docs) {
+      const cartId = docSnap.id;
       const { productId, quantity = 1 } = docSnap.data();
       const productRef = doc(db, "products", productId);
       const productSnap = await getDoc(productRef);
@@ -46,9 +47,9 @@ export default function Cart() {
       if (productSnap.exists()) {
         const data = productSnap.data();
         items.push({
-          id: docSnap.id,
+          id: cartId,
           productId,
-          cartId: docSnap.id,
+          cartId,
           ...data,
         });
         qty[productId] = quantity;
@@ -62,24 +63,25 @@ export default function Cart() {
 
   const updateQuantity = (productId, change) => {
     setQuantities((prev) => {
-      const newQty = Math.min(
-        Math.max((prev[productId] || 1) + change, 1),
-        cartItems.find((i) => i.productId === productId)?.stock || 1
-      );
+      const currentQty = prev[productId] || 1;
+      const stock =
+        cartItems.find((i) => i.productId === productId)?.stock || 1;
+      const newQty = Math.min(Math.max(currentQty + change, 1), stock);
       return { ...prev, [productId]: newQty };
     });
   };
 
   const removeFromCart = async (productId) => {
     if (!user) return;
+    const cartItem = cartItems.find((item) => item.productId === productId);
+    if (!cartItem) return;
 
-    const docId = `${user.uid}_${productId}`;
-    await deleteDoc(doc(db, "carts", docId));
+    await deleteDoc(doc(db, "carts", cartItem.cartId));
     setCartItems((prev) => prev.filter((item) => item.productId !== productId));
     setQuantities((prev) => {
-      const newQty = { ...prev };
-      delete newQty[productId];
-      return newQty;
+      const updated = { ...prev };
+      delete updated[productId];
+      return updated;
     });
   };
 
@@ -111,7 +113,7 @@ export default function Cart() {
     await setDoc(doc(db, "orders", orderId), order);
 
     for (const item of items) {
-      await deleteDoc(doc(db, "carts", `${buyerId}_${item.productId}`));
+      await deleteDoc(doc(db, "carts", item.cartId));
     }
 
     fetchCart(buyerId);
@@ -131,114 +133,79 @@ export default function Cart() {
   }, {});
 
   return (
-    <div style={styles.wrapper}>
-      {/* Left Side Image */}
-      <div style={styles.sideImage}>
-        <img
-          src="https://images.pexels.com/photos/31452650/pexels-photo-31452650.jpeg"
-          alt="Promo"
-          style={styles.image}
-        />
-      </div>
+    <div style={styles.container}>
+      <h1 style={styles.title}>🛒 Your Cart</h1>
+      {cartItems.length === 0 ? (
+        <p>No items in your cart.</p>
+      ) : (
+        Object.entries(groupedByVendor).map(([vendorId, items]) => {
+          const total = items.reduce(
+            (sum, item) => sum + (quantities[item.productId] || 1) * item.price,
+            0
+          );
 
-      {/* Main Cart Content */}
-      <div style={styles.container}>
-        <h1 style={styles.title}>🛒 Your Cart</h1>
-        {cartItems.length === 0 ? (
-          <p>No items in your cart.</p>
-        ) : (
-          Object.entries(groupedByVendor).map(([vendorId, items]) => {
-            const total = items.reduce(
-              (sum, item) =>
-                sum + (quantities[item.productId] || 1) * item.price,
-              0
-            );
-
-            return (
-              <div key={vendorId} style={styles.vendorBlock}>
-                <h2 style={styles.vendorName}>Vendor: {items[0].username}</h2>
-                <div style={styles.grid}>
-                  {items.map((item) => (
-                    <div key={item.productId} style={styles.card}>
-                      <Link
-                        to={`/product/${item.productId}`}
-                        style={{ textDecoration: "none", color: "inherit" }}
-                      >
-                        <img
-                          src={item.images?.[0] || item.image}
-                          alt={item.title}
-                          style={styles.img}
-                        />
-                        <h3>{item.title}</h3>
-                        <p>${item.price.toFixed(2)}</p>
-                      </Link>
-                      <div style={styles.quantityControls}>
-                        <button
-                          onClick={() => updateQuantity(item.productId, -1)}
-                        >
-                          -
-                        </button>
-                        <span style={{ margin: "0 1rem" }}>
-                          {quantities[item.productId] || 1}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, 1)}
-                        >
-                          +
-                        </button>
-                      </div>
+          return (
+            <div key={vendorId} style={styles.vendorBlock}>
+              <h2 style={styles.vendorName}>Vendor: {items[0].username}</h2>
+              <div style={styles.grid}>
+                {items.map((item) => (
+                  <div key={item.productId} style={styles.card}>
+                    <Link
+                      to={`/product/${item.productId}`}
+                      style={{ textDecoration: "none", color: "inherit" }}
+                    >
+                      <img
+                        src={item.images?.[0] || item.image}
+                        alt={item.title}
+                        style={styles.img}
+                      />
+                      <h3>{item.title}</h3>
+                      <p>${item.price.toFixed(2)}</p>
+                    </Link>
+                    <div style={styles.quantityControls}>
                       <button
-                        onClick={() => removeFromCart(item.productId)}
-                        style={styles.removeBtn}
+                        onClick={() => updateQuantity(item.productId, -1)}
                       >
-                        ❌ Remove
+                        -
+                      </button>
+                      <span style={{ margin: "0 1rem" }}>
+                        {quantities[item.productId] || 1}
+                      </span>
+                      <button onClick={() => updateQuantity(item.productId, 1)}>
+                        +
                       </button>
                     </div>
-                  ))}
-                </div>
-                <div style={styles.footer}>
-                  <p style={styles.totalText}>
-                    🧾 Total: <strong>${total.toFixed(2)}</strong>
-                  </p>
-                  <button
-                    onClick={() => placeOrder(vendorId, items)}
-                    style={styles.orderBtn}
-                  >
-                    ✅ Place Order for {items.length} item(s)
-                  </button>
-                </div>
+                    <button
+                      onClick={() => removeFromCart(item.productId)}
+                      style={styles.removeBtn}
+                    >
+                      ❌ Remove
+                    </button>
+                  </div>
+                ))}
               </div>
-            );
-          })
-        )}
-      </div>
+              <div style={styles.footer}>
+                <p style={styles.totalText}>
+                  🧾 Total: <strong>${total.toFixed(2)}</strong>
+                </p>
+                <button
+                  onClick={() => placeOrder(vendorId, items)}
+                  style={styles.orderBtn}
+                >
+                  ✅ Place Order for {items.length} item(s)
+                </button>
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }
 
 const styles = {
-  wrapper: {
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: "2rem",
-    padding: "2rem",
-  },
-  sideImage: {
-    flex: "1 1 300px",
-    maxWidth: "400px",
-    borderRadius: "12px",
-    overflow: "hidden",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    borderRadius: "12px",
-  },
   container: {
-    flex: "2 1 700px",
-    maxWidth: "100%",
+    padding: "2rem",
     fontFamily: "'Segoe UI', Tahoma, sans-serif",
   },
   title: {
