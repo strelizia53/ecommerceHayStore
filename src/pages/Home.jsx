@@ -96,8 +96,9 @@ const styles = {
     color: "#111",
   },
   hero: {
-    backgroundImage: `url('https://images.pexels.com/photos/19691166/pexels-photo-19691166.jpeg?auto=compress&cs=tinysrgb&w=1600')`,
-    backgroundSize: "cover",
+    backgroundImage: `url('/banner.jpeg')`, // ✅ Load from public folder
+    backgroundSize: "contain", // ✅ Show entire image
+    backgroundRepeat: "no-repeat", // ✅ No tiling
     backgroundPosition: "center",
     height: "80vh",
     color: "#fff",
@@ -109,7 +110,7 @@ const styles = {
     position: "relative",
   },
   heroContent: {
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     padding: "2rem",
     borderRadius: "10px",
     maxWidth: "700px",

@@ -11,9 +11,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -73,35 +70,21 @@ export default function ProductDetails() {
     alert("Added to cart!");
   };
 
-  const carouselSettings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    arrows: true,
-    autoplay: true,
-  };
-
   if (!product)
     return <p style={{ padding: "2rem" }}>Loading or product not found...</p>;
+
+  // Just use the first image if available
+  const productImage =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images[0]
+      : product.image || "";
 
   return (
     <div style={styles.container}>
       <div style={styles.productSection}>
-        {/* Image Carousel */}
-        <div style={styles.carouselContainer}>
-          <Slider {...carouselSettings}>
-            {(product.images || [product.image]).map((url, index) => (
-              <div key={index}>
-                <img
-                  src={url}
-                  alt={`product-${index}`}
-                  style={styles.carouselImage}
-                />
-              </div>
-            ))}
-          </Slider>
+        {/* Product Image */}
+        <div style={styles.imageContainer}>
+          <img src={productImage} alt="Product" style={styles.productImage} />
         </div>
 
         {/* Product Details */}
@@ -166,11 +149,11 @@ const styles = {
     flexWrap: "wrap",
     marginBottom: "3rem",
   },
-  carouselContainer: {
+  imageContainer: {
     flex: 1,
     minWidth: "300px",
   },
-  carouselImage: {
+  productImage: {
     width: "100%",
     height: "500px",
     objectFit: "cover",
